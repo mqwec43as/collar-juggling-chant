@@ -1,0 +1,3505 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Code Editor</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/18813/18813467.png" type="image/x-icon">
+  <style>
+    /* --- Base Styles --- */
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial;
+      --bg: #0f172a;
+      --card: #0b1220;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --active-background: #38bdf8;
+      --active-color: #04293a;
+      --header-item-font-size: 11px;
+      --font-size-menu-bar-items: 13px;
+      --font-size-tab-items: 14px;
+      --icon-foldgutter-folded: "˃";
+      --line-muted: rgba(255, 255, 255, 0.2) solid 1px;
+      --color-error: #ffb4b4;
+
+      --padding-tooltip: 8px;
+      --width-sidebar: 50px;
+    }
+
+
+    body {
+      margin: 0;
+      background: #0b1220;
+      color: #ffffff;
+      /* padding: 20px; */
+      overflow: hidden;
+      display: flex;
+    }
+
+    .main-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* .wrap {
+      max-width: 980px;
+      margin: 0 auto
+    } */
+
+    /* --- Forms & Buttons --- */
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit
+    }
+
+    button {
+      /* background: var(--accent); */
+      background-color: transparent;
+      border: none;
+      color: var(--accent);
+      padding: 8px 12px;
+      /* border-radius: 8px; */
+      cursor: pointer
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.1s ease-in-out;
+    }
+
+    .btn-ghost {
+      font-size: var(--font-size-menu-bar-items);
+      background: transparent;
+      /* border: 1px solid rgba(255, 255, 255, 0.06); */
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+
+    .btn-ghost.active {
+      text-decoration-line: underline;
+      text-decoration-color: var(--accent);
+      text-underline-offset: 5px;
+      text-decoration-thickness: 2px;
+      /* color: #04293a; */
+      border: none;
+      color: white;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      /* transition: all 0.1s ease-in-out; */
+    }
+
+
+    /* Red highlight for error state */
+    .btn-ghost.error-active {
+      /* background: #ef4444; */
+      /* Tailwind red-500 */
+      color: #ef4444;
+      border: none;
+      font-weight: 600;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px
+    }
+
+    /* --- Layout & Components --- */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--font-size-menu-bar-items);
+      /* margin-bottom: 12px */
+    }
+
+    .sidebar {
+
+      height: 100vh;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      /* padding-top: 10px; */
+      border-right: 1px solid #2a2a3d;
+      max-width: var(--width-sidebar) !important;
+    }
+
+    .sidebar-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: 0.2s;
+      cursor: pointer;
+      /* max-width: 40px; */
+      max-height: 50px !important;
+      max-width: inherit;
+      position: relative;
+      padding: 27px;
+      /* max-width: fit-content; */
+    }
+
+    .sidebar-btn::after {
+      content: attr(icon-title);
+      /* use custom attribute instead of title */
+      position: absolute;
+      left: 60px;
+      /* show tooltip to the right of the button */
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--card);
+      color: #fff;
+      padding: var(--padding-tooltip);
+      border-radius: 8px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+      z-index: 100;
+      border: var(--line-muted);
+    }
+
+    .sidebar-btn:hover::after {
+      opacity: 1;
+    }
+
+    .sidebar-btn:hover {
+      color: #fff;
+      background: transparent;
+      /* background: #2a2a3d; */
+    }
+
+    .sidebar-btn>div>i.codicon {
+      font-size: 25px;
+    }
+
+
+    .sidebar-icon-img {
+      width: 40px;
+      height: 30px;
+      /* object-fit: contain; */
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      margin-top: 4px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+      z-index: 0;
+      position: relative;
+
+    }
+
+    .settings {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+
+
+    .notice {
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    /* --- Refactored Utility Classes (replacing inline styles) --- */
+    .flex {
+      display: flex;
+      gap: 8px
+    }
+
+    .flex-center {
+      display: flex;
+      align-items: center;
+    }
+
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* .gap-6 {
+      gap: 6px;
+    } */
+
+    .ml-auto {
+      margin-left: auto;
+    }
+
+    .ml-12 {
+      /* margin-left: 12px; */
+    }
+
+    .mr-6 {
+      /* margin-right: 6px; */
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .mb-8 {
+      display: none !important;
+
+    }
+
+    .mb-8.active {
+      display: block !important;
+    }
+
+
+    /* --- Specific Element Styling (moved from inline) --- */
+    #ret,
+    #err,
+    #vars {
+      padding: 8px;
+      background: transparent;
+      /* border: 1px dashed rgba(255, 255, 255, 0.03); */
+      min-width: 0;
+      max-width: 100%;
+      flex-shrink: 1;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      height: auto;
+    }
+
+    #err {
+      display: block;
+      /* block is safer for multi-line text */
+      white-space: pre-wrap;
+      /* keep formatting but wrap naturally */
+      word-break: break-word;
+      overflow-x: auto;
+      /* optional: allow scrolling if needed */
+    }
+
+    #status.notice {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 8px;
+    }
+
+    #err {
+      color: var(--color-error);
+    }
+
+    /* --- Variables List --- */
+    .vars-list,
+    #tasksList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .var-item {
+      padding: 8px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+      /* prevent horizontal overflow */
+      min-width: 0;
+      max-width: auto;
+      flex-shrink: 1;
+      overflow-x: hidden;
+      word-break: break-word;
+    }
+
+    .var-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.1s ease-in-out;
+    }
+
+    .var-left {
+      /* max-width: 100%; */
+      overflow: hidden
+    }
+
+    .var-name {
+      font-weight: 600
+    }
+
+    .preview {
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all
+    }
+
+    /* --- Base Modal Styles --- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      /* background: rgba(2, 6, 23, 0.5); */
+      display: none;
+      /* align-items: center; */
+      /* justify-content: center; */
+      /* padding: 20px; */
+      z-index: 60
+    }
+
+    .modal {
+      left: calc(var(--width-sidebar)*1);
+      /* top: calc(var(--width-sidebar)/4); */
+      background: var(--card);
+      padding: 18px;
+      border-radius: 0px !important;
+      border-bottom-right-radius: 20px !important;
+      /* max-width: 940px; */
+      max-height: 86vh;
+      width: 80vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      border: var(--line-muted);
+      border-top: none;
+      position: fixed;
+    }
+
+    #modalContent {
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-x: hidden;
+      overflow-y: auto;
+      width: 100%;
+    }
+
+    #modalTitle {
+      word-break: break-all;
+      /* allows breaking inside long words (like hashes) */
+      overflow-x: hidden;
+      /* disable horizontal scroll */
+      overflow-y: auto;
+    }
+
+    .close-x {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 6px 8px;
+      /* border-radius: 8px; */
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+
+    .modal {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 80vh;
+      width: 90%;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    #tasksModal .modal #tasksList {
+      max-height: 300px;
+      overflow: auto;
+      margin-top: 8px;
+    }
+
+    #tasksModal .modal #tasksList button {
+      width: 100%;
+      text-align: left;
+      margin-bottom: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      padding: 6px 8px;
+      border-radius: 4px;
+      color: #e6eef8;
+      cursor: pointer;
+    }
+
+    #browseFileModal #fileList,
+    #tasksModal #tasksList {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+
+    #browseFileModal .file-item,
+    #tasksModal .task-item {
+      display: flex;
+      /* align-items: center;
+      text-align: left; */
+      /* justify-content: space-between; */
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #browseFileModal .file-item .file-info {
+      display: flex;
+      /* align-items: left;
+      text-align: left; */
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    #browseFileModal .file-item .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #browseFileModal .file-item .file-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    #browseFileModal .file-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    #browseFileModal .file-item .icon {
+      width: 20px;
+      text-align: center;
+    }
+
+    #browseFileModal .file-item .type-folder {
+      color: #60a5fa;
+      /* blue-400 */
+    }
+
+    #browseFileModal .file-name {
+      display: flex;
+      /* blue-400 */
+    }
+
+    #browseFileModal .file-item .type-file {
+      color: var(--muted);
+    }
+
+    #browseFileModal #currentPath {
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+
+    input {
+      outline: none;
+      /* margin-bottom: 10px; */
+      padding: 6px;
+      background-color: #0b1220;
+      border: 1px solid #333;
+      min-width: auto;
+      /* width: max-content; */
+      /* min-width: 400px; */
+      field-sizing: content;
+      color: #fff;
+      border-radius: 4px;
+      height: inherit;
+    }
+
+
+    input.tab-title-input {
+      padding: 0px;
+    }
+
+
+
+
+    /* --- CodeMirror Editor Styles --- */
+    .CodeMirror {
+      background: var(--card);
+      color: #e6eef8;
+      /* border-radius: 6px; */
+      font-size: 13px;
+      width: 100%;
+    }
+
+
+
+    /* --- Responsive Adjustments --- */
+    @media (max-width:720px) {
+      .grid-2 {
+        grid-template-columns: 1fr
+      }
+
+      .meta {
+        flex-direction: column;
+        align-items: stretch
+      }
+    }
+
+    /* Custom CSS  */
+    /* === VS Code–style match highlighting === */
+    .cm-matchhighlight,
+    .cm-vscode-highlight {
+      background-color: rgba(255, 255, 255, 0.15) !important;
+      /* soft white overlay */
+    }
+
+    .cm-indent {
+      border: #657e8b;
+    }
+
+    span.cm-tab,
+    .CodeMirror-line>span:not(:has(.cm-tab)):has(> span[cm-text]:only-child) {
+      border-left: var(--line-muted);
+    }
+
+
+    .cm-hint-match {
+      color: var(--accent, #0078d7);
+      font-weight: 600;
+    }
+
+
+    /* Red background behind entire error line */
+    .cm-error-line,
+    .cm-error-gutter {
+      background: none !important;
+      background-color: rgba(255, 0, 0, 0.15) !important;
+    }
+
+    .cm-error-line.CodeMirror-activeline-background,
+    .cm-error-gutter.CodeMirror-activeline-gutter {
+      background-color: rgba(255, 0, 0, 0.4) !important;
+    }
+
+
+    /* Small red dot in gutter (CodeMirror-lint-markers) */
+    .cm-error-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: red !important;
+      margin: 0 auto;
+      align-items: center;
+      justify-content: center;
+      display: flex;
+      transform: translateY(50%);
+    }
+
+
+    /* clickable error links */
+    .err-link {
+      display: inline;
+      color: #f14c4c;
+      cursor: pointer;
+      white-space: normal;
+      /* position: relative; */
+    }
+
+    .err-link:hover {
+      color: #ff7070;
+      /* text-decoration: underline solid; */
+    }
+
+    /* custom tooltip for gutter icons */
+    .custom-tooltip {
+      position: absolute;
+      font-size: 12px;
+      pointer-events: none;
+      white-space: pre-wrap;
+      z-index: 10000;
+      background: var(--card);
+      color: var(--color-error);
+      border: var(--line-muted);
+      padding: var(--padding-tooltip);
+      display: none;
+      transition: opacity 0.15s ease;
+      max-width: 50vh;
+      border-radius: 8px;
+    }
+
+
+
+    /* optional: highlight marker on scrollbar */
+    .CodeMirror-selection-highlight-scrollbar {
+      background-color: rgba(255, 255, 255, 0.677);
+    }
+
+    /* make sure it doesn’t clash with selected text */
+    .CodeMirror-focused .CodeMirror-selected {
+      background-color: rgba(56, 191, 248, 0.176) !important;
+      /* your selection color */
+    }
+
+    /* === VS Code-style active line highlight === */
+    .CodeMirror-activeline-background {
+      background: rgba(56, 191, 248, 0.104) !important;
+
+    }
+
+    /* Optional: highlight the gutter line number too */
+    .CodeMirror-activeline-gutter .CodeMirror-linenumber {
+      /* background: rgba(255, 255, 255, 0.08) !important; */
+      color: #fff !important;
+      /* or a softer gray like #e6eef8 */
+    }
+
+
+    .CodeMirror-placeholder {
+      color: #818181 !important;
+    }
+
+    .CodeMirror-search-field {
+      /* max-width: 100% !important; */
+      width: 80% !important;
+
+
+    }
+
+    .CodeMirror-search-field {
+      /* max-width: 100% !important; */
+      width: 80% !important;
+
+
+    }
+
+    .CodeMirror-gutter-elt {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+    }
+
+    .CodeMirror-linenumber {
+
+      justify-content: right;
+
+      align-items: right;
+    }
+
+    .CodeMirror-foldgutter {
+      width: 15px !important;
+    }
+
+    .CodeMirror-foldgutter-open,
+    .CodeMirror-foldgutter-folded {
+      font-size: 20px;
+      line-height: 0.8em;
+      /* color: yellowgreen; */
+    }
+
+    .CodeMirror-lines {
+      padding-left: 100px;
+    }
+
+    /* --- Tab Styles --- */
+    .tab-container {
+      display: flex;
+      align-items: center;
+      background: var(--card);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+      flex-grow: auto;
+      padding-bottom: 4px;
+      /* For scrollbar spacing */
+    }
+
+    /* Hide scrollbar for webkit browsers */
+    .tabs::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      display: none;
+    }
+
+    #browseFileModal #fileList::-webkit-scrollbar,
+    .modal::-webkit-scrollbar,
+    #tasksList::-webkit-scrollbar,
+    #modalContent::-webkit-scrollbar {
+      width: 5px;
+      height: 8px;
+      background-color: transparent;
+    }
+
+    #fileList::-webkit-scrollbar-thumb,
+    #tasksList::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background-color: var(--muted);
+    }
+
+
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: transparent;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: var(--font-size-tab-items);
+    }
+
+    .tab-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-item.active {
+      border-bottom: 2px solid var(--active-background);
+      color: white;
+    }
+
+    .tab-title-input {
+      outline: none;
+      border: transparent;
+      color: inherit;
+      background: transparent;
+      max-height: inherit;
+      /* border-radius: 4px; */
+    }
+
+
+    .tab-close {
+      font-size: 14px;
+      /* padding: px; */
+      border-radius: 4px;
+      line-height: 1;
+    }
+
+    .tab-close:hover {
+      color: red;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #add-tab-btn {
+      background: transparent;
+      padding: 8px 12px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      /* Prevent shrinking */
+      margin-left: 4px;
+    }
+
+    #add-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .code-editor {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      /* or fit to your layout */
+    }
+
+    .code-editor,
+    #editors-container,
+    .editor-wrapper {
+      overflow-x: hidden !important;
+    }
+
+    /* Hide horizontal scrollbar only (cross-browser) */
+    .code-editor::-webkit-scrollbar:horizontal,
+    #editors-container::-webkit-scrollbar:horizontal,
+    .editor-wrapper::-webkit-scrollbar:horizontal {
+      display: none;
+    }
+
+    .code-editor,
+    #editors-container,
+    .editor-wrapper {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .CodeMirror-hscrollbar {
+      height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* The editors container stays in normal flow */
+    #editors-container {
+      position: relative;
+      width: 100%;
+      height: 70vh;
+      /* fixed height area for editors */
+      z-index: 1;
+      /* background: #111; */
+      /* optional background for clarity */
+
+      overflow-x: hidden;
+    }
+
+    /* Stack editors inside this area */
+    .editor-wrapper {
+      position: absolute;
+      /* overlap editors inside container */
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* visibility: hidden; */
+      /* display: none; */
+      pointer-events: none;
+      z-index: 0;
+      overflow-x: hidden;
+    }
+
+    /* Active one visible */
+    .editor-wrapper.active {
+      /* visibility: visible; */
+      /* display: block; */
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+
+
+    /* Card appears below editors normally */
+    .card {
+      position: relative;
+      z-index: 0;
+    }
+
+    .variable-count-active {
+      background: transparent;
+    }
+
+    .cm-property {
+      color: #90e5dc;
+    }
+
+    .cm-variable-2 {
+      color: #ff944d;
+    }
+
+    /* === Container === */
+    ul.CodeMirror-hints {
+      list-style: none;
+      padding: 4px 0;
+      border: 1px solid #333;
+      background: var(--card);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      color: #d4d4d4;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      max-width: 70vh;
+      max-height: 30vh;
+    }
+
+    /* === List items === */
+    li.CodeMirror-hint {
+      flex-direction: column;
+      padding: 3px;
+    }
+
+    /* === Active / Hover state === */
+    li.CodeMirror-hint-active,
+    li.CodeMirror-hint:hover {
+      background: rgba(255, 255, 255, 0.05);
+
+      background-color: #094771 !important;
+      /* border-left-width: 2px; */
+      font-weight: bold;
+      padding: 2px;
+      transition: all 0.1s ease-in-out;
+    }
+
+    /* === Title (main text) === */
+    .CodeMirror-hints-title {
+      color: #dcdcdc;
+      font-size: 1em;
+    }
+
+    /* === Subtext (detail line) === */
+    .CodeMirror-hints-subtext {
+      display: inline-flex;
+      color: #808080;
+      font-size: 0.8em;
+      height: auto;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+
+    /* === Scrollbar (VS Code style) === */
+    .CodeMirror-hints::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .CodeMirror-hints::-webkit-scrollbar-thumb {
+      background: #3c3c3c;
+      border-radius: 4px;
+    }
+
+    .CodeMirror-hints::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+
+
+
+    .circle {
+      display: none;
+      background-color: var(--accent);
+      color: #04293a;
+      border-radius: 40px;
+      padding: 2px 6px;
+      font-size: 12px;
+      margin-left: 4px;
+    }
+  </style>
+  <script>
+
+    // ✅ One array for all resources — order preserved
+    const cdnResources = [
+      'https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/codemirror.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/foldgutter.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/hint/show-hint.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/theme/blackboard.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/scroll/simplescrollbars.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/dialog/dialog.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/display/fullscreen.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/lint/lint.min.css',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/codemirror.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/mode/clike/clike.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/foldcode.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/comment-fold.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/foldgutter.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/fold/brace-fold.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/hint/show-hint.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/mode/simple.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/scroll/simplescrollbars.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/edit/closebrackets.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/edit/matchbrackets.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/display/placeholder.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/autorefresh.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/display/rulers.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/search/searchcursor.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/search/search.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/dialog/dialog.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/selection/active-line.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/search/match-highlighter.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/display/fullscreen.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/search/jump-to-line.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/comment/comment.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.4/beautify.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.4/beautify.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/addon/lint/lint.min.js'
+    ];
+
+    async function loadCdnResources(urls) {
+      const loaded = new Set();
+
+      for (const url of urls) {
+        if (!url || loaded.has(url)) continue;
+
+        // Auto-detect file type
+        const isCSS = url.trim().toLowerCase().endsWith('.css');
+        const isJS = url.trim().toLowerCase().endsWith('.js');
+
+        if (isCSS) {
+          // Skip if already added
+          if (document.querySelector(`link[href="${url}"]`)) continue;
+          await new Promise((resolve, reject) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = url;
+            link.onload = resolve;
+            link.onerror = () => reject(new Error(`Failed to load CSS: ${url}`));
+            document.head.appendChild(link);
+          });
+        } else if (isJS) {
+          if (document.querySelector(`script[src="${url}"]`)) continue;
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = false; // preserve load order
+            script.defer = false;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error(`Failed to load JS: ${url}`));
+            document.head.appendChild(script);
+          });
+        } else {
+          console.warn(`⚠️ Unknown file type (skipped): ${url}`);
+        }
+
+        loaded.add(url);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Load all and emit global event
+      loadCdnResources(cdnResources)
+        .then(() => {
+          console.log("✅ All CDN resources loaded.");
+          window.dispatchEvent(new Event("cdnLoaded"));
+        })
+        .catch(err => console.error("❌ Failed to load CDN resources:", err));
+    });
+  </script>
+
+
+</head>
+
+<body>
+
+  <div class="main-body">
+    <header>
+      <div class="settings card" style="display:none;">
+        <div class="flex-center">
+          <button id="openFileBtn" class="btn-ghost">Open File</button>
+          <button id="saveAllBtn" class="btn-ghost">Save All</button>
+          <button id="selectTask" class="btn-ghost">Select Task</button>
+          <button id="openImportBtn" class="btn-ghost">Import Code</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="code-editor">
+      <main>
+
+        <div class="tab-container">
+          <div class="tabs" id="tabs-list">
+            <!-- Tabs will be dynamically added here -->
+          </div>
+          <button id="add-tab-btn" class="btn-ghost" title="New Tab">+</button>
+        </div>
+        <div id="editors-container">
+          <!-- Editor instances will be added here -->
+        </div>
+
+        <div class="card">
+          <div class="flex-center">
+            <button id="runBtn">Run</button>
+            <button id="error-btn" class="btn-ghost small">Error</button>
+            <button id="return-btn" class="btn-ghost small">Return</button>
+            <button id="variable-btn" class="btn-ghost">Variables <span id="variable-count"
+                class="circle"></span></button>
+            <!-- <button id="clearBtn" class="btn-ghost">Clear</button> -->
+            <div class="meta ml-auto">
+              <div id="status" class="notice">Not sent</div>
+            </div>
+          </div>
+          <p>
+          <div class="mb-8">
+
+            <div class="small flex-between mb-6">
+
+              <button id="copyError" class="btn-ghost">Copy</button>
+            </div>
+            <pre id="err"></pre>
+          </div>
+          <div class="mb-8">
+            <div class="small flex-between mb-6">
+              <!-- <span>Return</span> -->
+              <button id="copyReturn" class="btn-ghost">Copy</button>
+            </div>
+            <pre id="ret"></pre>
+          </div>
+          <div class="mb-8">
+            <div class="small flex-between mb-6">
+            </div>
+            <ul id="vars" class="vars-list">
+              <li class="notice">No variables yet.</li>
+            </ul>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="modal" class="modal-backdrop">
+    <div class="modal">
+      <div class="flex-between mb-8">
+        <strong id="modalTitle">Full value</strong>
+        <div class="flex gap-8">
+          <button id="copyBtn" class="btn-ghost">Copy</button>
+          <button id="closeModal" class="close-x">Close</button>
+        </div>
+      </div>
+      <pre id="modalContent"></pre>
+    </div>
+  </div>
+
+  <div id="browseFileModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="flex-between mb-8">
+        <strong>File Browser</strong>
+        <button id="closeBrowseFileModal" class="close-x">Close</button>
+      </div>
+      <input type="text" id="fileFilterInput" placeholder="Filter files...">
+      <div id="currentPath" class="mb-6">/</div>
+      <ul id="fileList"></ul>
+      <div class="flex-between">
+        <div>
+          <input type="text" id="newFolderName" placeholder="New folder name..."
+            style="background: #0b1220; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 6px; color: #fff;">
+          <button id="mkdirBtn" class="btn-ghost">Create Folder</button>
+        </div>
+        <button id="saveFileFab" class="btn-ghost" style="display: none;">Save Here</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tasksModal" class="modal-backdrop">
+    <div class="modal">
+      <input type="text" id="taskFilter" placeholder="Filter tasks..." />
+      <ul id="tasksList">
+    </div>
+    <div style="text-align:right;"> <button id="closeTasks" class="btn-ghost">Close</button>
+    </div>
+  </div>
+  </div>
+
+  <!-- Taskernet URL Modal (initially hidden) -->
+  <div id="importCodeModal" class="modal-backdrop" style="display:none;">
+    <div class="modal">
+      <div class="flex-between mb-8">
+        <strong>Enter Taskernet/code URL</strong>
+
+      </div>
+      <input type="text" id="codeUrl" placeholder="https://taskernet.com/shares/?user=...&id=.../other raw text URL" />
+      <div>
+        <button id="importCode" class="btn-ghost">Fetch Codes</button>
+        <button id="closeImportCodeModal" class="btn-ghost">Close</button></button>
+      </div>
+      <!-- <div id="taskernetResult" class="mt-8"></div> -->
+    </div>
+  </div>
+
+
+  <script>
+    // --- DOM Elements ---
+    const el = id => document.getElementById(id);
+    const tabsList = el('tabs-list');
+    const addTabBtn = el('add-tab-btn');
+    const editorsContainer = el('editors-container');
+    const runBtn = el('runBtn');
+    // const clearBtn = el('clearBtn');
+    const saveAllBtn = el('saveAllBtn');
+    const varsList = el('vars');
+    const retEl = el('ret');
+    const errEl = el('err');
+    const statusEl = el('status');
+    const modal = el('modal');
+    const modalContent = el('modalContent');
+    const modalTitle = el('modalTitle');
+    const closeModal = el('closeModal');
+    const copyBtn = el('copyBtn');
+    const copyReturnBtn = el('copyReturn');
+    const copyErrorBtn = el('copyError');
+    const selectTaskBtn = el('selectTask');
+    const tasksModal = el('tasksModal');
+    const taskFilter = el('taskFilter');
+    const tasksList = el('tasksList');
+    // const loadSessionBtn = el('loadSessionBtn');
+    const closeTasksBtn = el('closeTasks');
+    const openFileBtn = el('openFileBtn');
+    const browseFileModal = el('browseFileModal');
+    const closeBrowseFileModal = el('closeBrowseFileModal');
+    const currentPathEl = el('currentPath');
+    const fileListEl = el('fileList');
+    const mkdirBtn = el('mkdirBtn');
+    const newFolderNameEl = el('newFolderName');
+    const saveFileFab = el('saveFileFab');
+    const fileFilterInput = el('fileFilterInput');
+
+    const importCodeModal = el('importCodeModal');
+    const closeImportCodeModal = el('closeImportCodeModal');
+    const importCodeBtn = el('importCode');
+    const codeUrlInput = el('codeUrl');
+    // const taskernetResult = el('taskernetResult');
+    const openImportBtn = el('openImportBtn');
+
+    // --- Config and State ---
+    const truncate = (s, n = 140) => !s ? '' : (String(s).length > n ? String(s).slice(0, n) + '…' : String(s));
+    let demoConfig = { protocol: "http:", host: "192.168.1.9", port: "8443" };
+    let runDemo = false;
+    const loc = new URL(window.location.href);
+    if (loc.hostname == "127.0.0.1" && loc.port == "5500") {
+      runDemo = true;
+    }
+    const defaultConfig = {
+      host: loc.hostname,
+      port: loc.port || (loc.protocol === 'https:' ? '443' : '80')
+    };
+    let editors = [];
+    let activeEditorId = null;
+    let tabCounter = 0;
+    let lastFolderPath = "/storage/emulated/0";
+    let browseMode = 'open'; // can be 'open' or 'save'
+    let fileToSave = null;
+    let sessionKey = 'Default';
+
+    const EXTRAWORDS = [
+      "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const", "continue",
+      "default", "do", "double", "else", "enum", "extends", "false", "final", "finally", "float", "for", "goto",
+      "if", "implements", "import", "instanceof", "int", "interface", "long", "native", "new", "null", "package",
+      "private", "protected", "public", "return", "short", "static", "strictfp", "super", "switch", "synchronized",
+      "this", "throw", "throws", "transient", "true", "try", "void", "volatile", "while",
+      "println", "print", "tasker", "context", "intent", "bundle", "cat", "cd", "clear", "exec", "exit", "load", "source", "bind", "setAccessibility",
+      "JSONObject", "JSONArray", "String", "int", "boolean", "char", "float", "double", "long", "short", "byte", "Object"
+    ];
+
+    // --- CodeMirror Token Data
+    const tokenData = {
+      start: [
+        {
+          regex: /r"""/,
+          token: "string",
+          next: "qstring_triple_raw"
+        },
+        {
+          regex: /"""/,
+          token: "string",
+          next: "qstring_triple"
+        },
+        {
+          regex: /"(?:[^\\]|\\.)*?"/,
+          token: "string"
+        },
+        {
+          regex: /\b(true|false|null|undefined)\b/,
+          token: ["atom"]
+        },
+        {
+          regex: /\b(abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|false|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while)\b/,
+          token: ["keyword"]
+        },
+        {
+          regex: /\b(println|print|tasker|getVariable|setVariable|getObject|setObject|context|intent|bundle|cat|cd|clear|exec|exit|load|source|bind|setAccessibility)\b/,
+          token: ["builtin"]
+        },
+        {
+          regex: /([a-zA-Z_$][\.\w$]*)( +)([a-zA-Z_$][\w$]*)(?= *=)/i,
+          token: ["property", null, "variable"]
+        },
+        {
+          regex: /([a-zA-Z_$][\w$]*)(?= *[=<>!&?])/i,
+          token: ["variable"]
+        },
+        {
+          regex: /(,|\()( *)([a-zA-Z_$][\w$]*)( *)(?=,|\))/i,
+          token: [null, null, "variable", null]
+        },
+        {
+          regex: /(,|\()( *)([a-zA-Z_$][\.\w$]*)( +)([a-zA-Z_$][\w$]*)( *)(?=,|\))/i,
+          token: [null, null, "property", null, "variable-2", null]
+        },
+        {
+          regex: /\/\/.*/,
+          token: "comment"
+        },
+        { regex: /\/\*/, token: "comment", next: "comment" },
+        {
+          regex: /"(?:[^\\]|\\.)*?"/,
+          token: "string"
+        },
+        {
+          regex: /'(?:[^\\]|\\.)*?'/,
+          token: "string"
+        },
+        {
+          regex: /\b(0x)?\d+(\.\d+)?\b/,
+          token: "number"
+        },
+        {
+          regex: /@\b(?:gt>|lt<|lteq<=|gteq>=|or\|\||and&&|bitwise_and&|bitwise_or\||left_shift<<|right_shift>>|right_unsigned_shift>>>|and_assign&=|or_assign\|=|left_shift_assign<<=|right_shift_assign>>=|right_unsigned_shift_assign>>>=)\b/,
+          token: "operator"
+        },
+        {
+          regex: /([a-zA-Z_$][\w$]*)( )([a-zA-Z_$][\w$]*)(?=\()/,
+          token: ["property", null, "def"]
+        },
+        {
+          regex: /([a-zA-Z_$][\w$]*)(?=\()/,
+          token: ["def"]
+        },
+        {
+          regex: /([a-zA-Z_$][\w$]*)(\.)([a-zA-Z_$][\w$]*)(?=\()/,
+          token: ["variable", null, "def"]
+        },
+        {
+          regex: /[+\-*/%=<>!&|?:]/,
+          token: "operator"
+        },
+        {
+          regex: /[{}]/,
+          token: "bracket"
+        },
+        {
+          regex: /[\[\]()]/,
+          token: "bracket"
+        },
+        {
+          regex: /[;,.]/,
+          token: "punctuation"
+        },
+        {
+          regex: /[a-zA-Z_$][\w$]*(?= *=)/,
+          token: "variable"
+        },
+        {
+          regex: /\s+/,
+          token: null
+        }
+      ],  // The qstring_triple state is for inside a multiline string.
+      qstring_triple: [
+        // Look for the closing triple quote. The '`' is important.
+        // By using `.` in the regex, it matches any character across lines.
+        // The mode stays in this state until a closing `"""` is found.
+        { regex: /.*?"""/, token: "string", next: "start" },
+        { regex: /.*/, token: "string" }
+      ],
+      // Special state for raw triple-quoted strings.
+      qstring_triple_raw: [
+        { regex: /.*?r?"""/, token: "string", next: "start" },
+        { regex: /.*/, token: "string" }
+      ]
+      , comment: [
+        {
+          regex: /.*?\*\//,
+          token: "comment",
+          next: "start"
+        },
+        {
+          regex: /.*/,
+          token: "comment"
+        }
+      ],
+      meta: {
+        lineComment: "//",
+        blockCommentStart: "/*",
+        blockCommentEnd: "*/",
+        fold: "brace"
+      }
+    }
+    const placeHolder = `THIS EDITOR DOESN'T SAVE AUTOMATICALLY.
+MAKE SURE TO ALWAYS NAME AND SAVE CURRENT FILE.
+THEN SAVE ALL TO SAVE ALL FILES AND REMEMBER LAST OPENED TABS.
+
+
+Available shortcuts:
+    
+Ctrl + /      →  Toggles comments on or off for the selected lines.
+                 (Adds or removes // at the start of the line.)
+
+Ctrl + [      →  Folds (hides) all sections of code, so you only see the main structure.
+
+Alt  + [      →  Unfolds (shows) all previously folded code sections.
+
+Ctrl + ]      →  Folds (hides) just the current section of code where your cursor is.
+
+Ctrl + P      →  Beautify active editor.
+
+Ctrl + S      →  Saves your current file or tab.
+
+Ctrl + Space  →  Opens the autocomplete menu to suggest code completions.
+
+Esc           →  Exits fullscreen mode if the editor is currently fullscreen.
+
+F11           →  Toggles fullscreen mode on or off for the editor.
+`;
+    const editorConfig = {
+      autoCloseBrackets: true,
+      autofocus: true,
+      autorefresh: true,
+      extraKeys: {
+        "Ctrl-P": function (cm) {
+          showAlert("Beautifying code.", 1000);
+          formatActiveEditor();
+        },
+        "Ctrl-/": function (cm) {
+          showAlert("Toggling comments.", 1000);
+          cm.toggleComment();
+        },
+        "Ctrl-[": function (cm) {
+          showAlert("Folding all code sections.", 1000);
+          CodeMirror.commands.foldAll(cm);
+        },
+        "Ctrl-]": function (cm) {
+          showAlert("Folding current code section.", 1000);
+          cm.foldCode(cm.getCursor());
+        },
+        "Alt-[": function (cm) {
+          showAlert("Unfolding all code sections.", 1000);
+          CodeMirror.commands.unfoldAll(cm);
+        },
+        "Ctrl-S": (cm) => {
+          showAlert("Saving current file.", 1000);
+          saveCurrentTab(); return false;
+        },
+        "Ctrl-Space": (cm) => {
+          CodeMirror.commands.autocomplete(cm); return false;
+        }
+        ,
+        "Esc": cm => {
+          showAlert("Exiting fullscreen mode.", 1000);
+          if (cm.getOption("fullScreen")) cm.setOption("fullScreen", false);
+        },
+        "F11": cm => {
+          showAlert("Toggling fullscreen mode.", 1000);
+          cm.setOption("fullScreen", !cm.getOption("fullScreen"))
+        }
+      },
+      fixedGutter: false,
+      foldGutter: true,
+      gutters: [
+        "CodeMirror-lint-markers",
+        "CodeMirror-linenumbers",
+        "CodeMirror-foldgutter"
+      ],
+      highlightSelectionMatches: { showToken: /\w/, annotateScrollbar: true, style: "vscode-highlight" },
+      lineNumbers: true,
+      lineWrapping: true,
+      matchBrackets: true,
+      mode: "beanshell",
+      placeholder: placeHolder,
+      rulers: true,
+      scrollbarStyle: "overlay",
+      smartIndent: true,
+      styleActiveLine: true,
+      theme: "blackboard",
+      // Indentation
+      indentWithTabs: true,
+      tabSize: 4
+    }
+    const sidebarConfig = [
+      {
+        title: "Session",
+        icon: "codicon codicon-repo",
+        function: function () {
+          showAlert("Session: " + sessionKey);
+          showAlert("Function is not available yet.");
+        }
+      },
+      {
+        title: "Open File",
+        icon: "codicon codicon-files",
+        function: function () {
+          openFileBrowser('open');
+        }
+      },
+      {
+        title: "Save All",
+        icon: "codicon codicon-save-all",
+        function: function () {
+          saveAllTabs();
+        }
+      },
+      {
+        title: "Select Task Before Run",
+        icon: "codicon codicon-sort-precedence",
+        function: async function () {
+          const tasks = await fetchTasks();
+          showTasksModal(tasks);
+        }
+      },
+      {
+        title: "Import Code",
+        icon: "codicon codicon-cloud-download",
+        function: function () {
+          importCodeModal.style.display = 'flex';
+          codeUrlInput.value = '';
+          codeUrlInput.focus();
+        }
+      }
+    ];
+
+
+    // --- CodeMirror Editor
+    window.addEventListener("cdnLoaded", () => {
+      // --- CodeMirror Setup ---
+      registerCustomCodeMirrorHint();
+      CodeMirror.defineSimpleMode("beanshell", tokenData);
+      createSidebar(sidebarConfig, 'body', window.cm);
+    });
+
+    // --- CodeMirror Hinting (IIFE) ---    
+    function registerCustomCodeMirrorHint() {
+      "use strict";
+      const WORD = /[\w$]+(\([^\(\)"']*?\))?/;
+      const RANGE = 500;
+      window.fetchedMethods = window.fetchedMethods || [];
+
+      function dynamicHint(cm, self, data) {
+        const cursor = cm.getCursor();
+        const line = cm.getLine(cursor.line);
+        let start = cursor.ch;
+        while (start && /[\w$]/.test(line.charAt(start - 1))) start--;
+        cm.replaceRange(data.text, { line: cursor.line, ch: start }, cursor);
+      }
+
+      function fuzzyMatch(needle, haystack) {
+        needle = needle.toLowerCase();
+        haystack = haystack.toLowerCase();
+        let i = 0, j = 0;
+        while (i < needle.length && j < haystack.length) {
+          if (needle[i] === haystack[j]) i++;
+          j++;
+        }
+        return i === needle.length;
+      }
+
+      // Calculate closeness score for sorting
+      function fuzzyScore(needle, haystack) {
+        needle = needle.toLowerCase();
+        haystack = haystack.toLowerCase();
+        let score = 0, i = 0, j = 0;
+        while (i < needle.length && j < haystack.length) {
+          if (needle[i] === haystack[j]) {
+            score += 2;
+            if (j > 0 && haystack[j - 1] === needle[i - 1]) score += 1;
+            i++;
+          }
+          j++;
+        }
+        return i === needle.length ? score : 0;
+      }
+
+      // Highlight matched letters for display
+      function highlightMatch(text, pattern) {
+        if (!pattern) return text;
+        const lowerText = text.toLowerCase();
+        const lowerPattern = pattern.toLowerCase();
+        let result = "";
+        let t = 0, p = 0;
+        while (t < text.length) {
+          if (p < lowerPattern.length && lowerText[t] === lowerPattern[p]) {
+            result += `<span class="cm-hint-match">${text[t]}</span>`;
+            p++;
+          } else {
+            result += text[t];
+          }
+          t++;
+        }
+        return result;
+      }
+
+      CodeMirror.registerHelper("hint", "custom", async (editor, options = {}) => {
+        if (!editor) return;
+        const word = options.word || WORD;
+        const range = options.range || RANGE;
+        let extraWords = options.extraWords || EXTRAWORDS;
+        const cur = editor.getCursor();
+        const curLine = editor.getLine(cur.line);
+        let end = cur.ch;
+        let start = end;
+        while (start && word.test(curLine.charAt(start - 1))) start--;
+        const curWord = start !== end ? curLine.slice(start, end) : "";
+        const list = [];
+        const seen = {};
+        const re = new RegExp(word.source, "gi");
+        let objectBeforeDot = null;
+        const lastChar = curLine.charAt(end - 1);
+        if (lastChar === "." || lastChar === ")") {
+          let i = end - 2;
+          let parenCount = 0;
+          if (lastChar === ')') parenCount++;
+          if (curLine.charAt(i) === ')') {
+            parenCount++;
+            i--;
+          }
+          while (i >= 0 && parenCount > 0) {
+            if (curLine.charAt(i) === ')') parenCount++;
+            else if (curLine.charAt(i) === '(') parenCount--;
+            i--;
+          }
+          while (i >= 0 && /[\w$.]/.test(curLine.charAt(i))) i--;
+          if (lastChar === '.') objectBeforeDot = curLine.slice(i + 1, end - 1);
+          else objectBeforeDot = curLine.slice(i + 1, end);
+
+          function createHintFromSignature(fullSignature, curWord, objectName = null) {
+            const fullMatch = fullSignature.replace(/\/\*.*?\*\//g, ''); // Strip comments
+            const nameMatch = fullMatch.match(/(?:\.|^)([\w$]+)\s*\(/);
+            const methodName = nameMatch ? nameMatch[1] : fullMatch.split('(')[0].split('.').pop();
+
+            const argsMatch = fullMatch.match(/\(([^)]*)\)/);
+            let insertText = methodName + '()';
+            let displayText = methodName + '()';
+            let subtext = null;
+
+            if (argsMatch) {
+              const args = argsMatch[1].trim();
+              if (args) {
+                const argList = args.split(',').map(s => s.trim().split('.').pop().split(' ')[0]);
+                const displayArgs = argList.join(', ');
+                const insertArgs = argList.map(() => '').join(', ');
+                displayText = `${methodName}(${displayArgs})`;
+                insertText = `${methodName}(${insertArgs})`;
+              }
+            }
+
+            // Check if it's a full Java-like declaration to decide on subtext
+            if (/\s/.test(fullMatch.trim().split('(')[0]) && fullMatch.includes('.')) {
+              subtext = fullMatch;
+            }
+
+            return {
+              text: insertText,
+              displayText: displayText,
+              hint: dynamicHint,
+              subtext: subtext,
+              objectName: objectName,
+              render: function (el) {
+                const highlighted = highlightMatch(this.displayText, curWord);
+                const title = this.subtext || this.displayText;
+                if (this.subtext) {
+                  el.innerHTML = `<div class="CodeMirror-hints-title" title="${title}">${highlighted}</div><div class="CodeMirror-hints-subtext">${this.subtext}</div>`;
+                } else {
+                  el.innerHTML = `<div class="CodeMirror-hints-title" title="${title}">${highlighted}</div>`;
+                }
+              }
+            };
+          }
+
+          if (objectBeforeDot) {
+            window.fetchedMethods = [];
+            try {
+              const fetchObject = objectBeforeDot;
+              const importList = getImportsFromEditor(editor);
+              let { host, port } = defaultConfig;
+              if (runDemo) ({ host, port } = demoConfig);
+              const url = `http://${host}:${port}/java/api/object`;
+              const body = JSON.stringify({ object: fetchObject, import: importList });
+              const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+              if (response.ok) {
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                  const methods = data.map(fullLine => createHintFromSignature(fullLine, curWord, fetchObject));
+                  window.fetchedMethods = [...methods, ...window.fetchedMethods.filter(m => m.objectName !== fetchObject)];
+                }
+              }
+            } catch (err) { console.error("Fetch failed:", err); }
+          }
+        }
+        if (window.fetchedMethods.length) {
+          const matchingMethods = window.fetchedMethods.filter(item => (!objectBeforeDot || item.objectName === objectBeforeDot) && fuzzyMatch(curWord, item.text));
+          if (matchingMethods.length) {
+            extraWords = [...matchingMethods, ...EXTRAWORDS];
+          }
+          else if (objectBeforeDot) {
+            window.fetchedMethods = window.fetchedMethods.filter(m => m.objectName !== objectBeforeDot);
+          }
+        }
+        let extraList = [];
+        extraWords.forEach(w => {
+          const item = typeof w === "string" ? {
+            text: w,
+            displayText: w,
+            hint: dynamicHint,
+            render: el => {
+              const highlighted = highlightMatch(w, curWord);
+              el.innerHTML = `<div class="CodeMirror-hints-title" title="${w}">${highlighted}</div>`;
+            }
+          } : {
+            ...w,
+            render: el => {
+              const highlighted = highlightMatch(w.displayText || w.text, curWord);
+              const title = w.subtext || w.text || '';
+              // If has subtext → show two-line render (like VS Code)
+              if (w.subtext) {
+                el.innerHTML = `<div class="CodeMirror-hints-title" title="${title}">${highlighted}</div><div class="CodeMirror-hints-subtext">${w.subtext}</div>`;
+              } else {
+                el.innerHTML = `<div class="CodeMirror-hints-title" title="${title}">${highlighted}</div>`;
+              }
+            }
+          };
+
+          if (item.text && fuzzyMatch(curWord, item.text) && !seen[item.text]) {
+            seen[item.text] = true;
+            extraList.push(item);
+          }
+        });
+
+        extraList.sort((a, b) =>
+          fuzzyScore(curWord, b.text) - fuzzyScore(curWord, a.text)
+        );
+        let docList = [];
+        [-1, 1].forEach(dir => {
+          let line = cur.line;
+          const endLine = Math.min(Math.max(line + dir * 500, editor.firstLine()), editor.lastLine()) + dir;
+          while (line !== endLine) {
+            const text = editor.getLine(line);
+            let m;
+            while ((m = re.exec(text))) {
+              if (line === cur.line && m[0] === curWord) continue;
+              if ((!curWord || fuzzyMatch(curWord, m[0])) && !seen[m[0]]) {
+                seen[m[0]] = true;
+                const fullMatch = m[0].replace(/\/\*.*?(\*\/)?/g, '');
+                const methodNameMatch = fullMatch.match(/^[\w$]+/);
+                const methodName = methodNameMatch ? methodNameMatch[0] : fullMatch;
+                const argsMatch = fullMatch.match(/\((.*)\)/);
+                let insertText = fullMatch, displayText = fullMatch, displayHTML = fullMatch;
+                if (argsMatch) {
+                  const args = argsMatch[1].split(',').map(s => s.trim().split(' ')[0]);
+                  insertText = methodName + '(' + args.map(() => "").join(", ") + ')';
+                  displayText = methodName + '(' + args.join(', ') + ')';
+                }
+                const highlighted = highlightMatch(displayText, curWord);
+                docList.push({
+                  text: insertText,
+                  displayText: displayText,
+                  hint: dynamicHint,
+                  render: el => {
+                    displayHTML = `<div class="CodeMirror-hints-title" title="${fullMatch}"">${highlighted}</div>`;
+                    el.innerHTML = displayHTML;
+                  }
+                });
+              }
+            }
+            line += dir;
+          }
+        });
+        docList.sort((a, b) => {
+          const aFunc = a.text.includes(")");
+          const bFunc = b.text.includes(")");
+          if (aFunc !== bFunc) return aFunc ? -1 : 1;
+          return a.text.localeCompare(b.text);
+        });
+        list.push(...extraList, ...docList);
+        return { list, from: CodeMirror.Pos(cur.line, start), to: CodeMirror.Pos(cur.line, end) };
+      });
+      CodeMirror.commands.autocomplete = cm => { cm.showHint({ hint: CodeMirror.hint.custom, editor: cm }); };
+    }
+
+    // --- Core Functions ---
+    function createNewEditor(state = null) {
+      const editorWrapper = document.createElement('div');
+      editorWrapper.className = 'editor-wrapper';
+
+      const textArea = document.createElement('textarea');
+      editorWrapper.appendChild(textArea);
+      editorsContainer.appendChild(editorWrapper);
+
+      const newEditor = CodeMirror.fromTextArea(textArea, editorConfig);
+      // newEditor.setValue(value);
+      newEditor.setSize(null, '70vh');
+      if (state !== null) setEditorState(newEditor, state);
+
+      let hintTimer;
+
+      newEditor.on("inputRead", function (cm, change) {
+        // Ignore paste, undo, redo, or programmatic updates
+        // , "setValue",
+        if (["paste", "undo", "redo"].includes(change.origin)) return;
+
+        // Clear any existing pending hint
+        clearTimeout(hintTimer);
+
+        // Only trigger hint for valid character input
+        if (change.text[0] && /[a-zA-Z0-9_.]/.test(change.text[0])) {
+          hintTimer = setTimeout(() => {
+            if (!cm.state.completionActive) { // avoid re-triggering while open
+              cm.showHint({
+                hint: CodeMirror.hint.custom,
+                completeSingle: false,
+                editor: cm
+              });
+            }
+          }, 100); // adjust delay (ms) as you like
+        }
+      });
+      return { editor: newEditor, wrapper: editorWrapper };
+    }
+
+    function createSidebar(config, containerSelector = 'body', cm = null) {
+      const sidebar = document.createElement('div');
+      sidebar.className = 'sidebar';
+
+      config.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'sidebar-btn';
+        btn.setAttribute('icon-title', item.title); // tooltip text (on hover)
+
+        let hasValidIcon = false;
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'icon-container';
+
+        if (item.icon) {
+          if (/^https?:\/\//.test(item.icon) || /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(item.icon)) {
+            // URL or local file path
+            const img = document.createElement('img');
+            img.src = item.icon;
+            img.alt = item.title || 'icon';
+            img.className = 'sidebar-icon-img';
+            img.onerror = () => { // fallback if image fails
+              iconContainer.textContent = item.title || '?';
+            };
+            iconContainer.appendChild(img);
+            hasValidIcon = true;
+          } else if (/^(fa[\s\-]|bi[\s\-]|mdi[\s\-]|icon-)/.test(item.icon)) {
+            // Font Awesome / Bootstrap Icons / Material Design / etc.
+            const i = document.createElement('i');
+            i.className = item.icon;
+            iconContainer.appendChild(i);
+            hasValidIcon = true;
+          } else if (/^[\p{Emoji}\w]$/u.test(item.icon)) {
+            // single emoji or symbol
+            const span = document.createElement('span');
+            span.textContent = item.icon;
+            iconContainer.appendChild(span);
+            hasValidIcon = true;
+          } else if (/^(fa[\s\-]|bi[\s\-]|mdi[\s\-]|icon-|codicon[\s\-])/.test(item.icon)) {
+            const i = document.createElement('i');
+            i.className = item.icon;
+            iconContainer.appendChild(i);
+            hasValidIcon = true;
+          }
+        }
+
+        // fallback: show text if no valid icon
+        if (!hasValidIcon) {
+          const fallback = document.createElement('span');
+          fallback.textContent = item.title || '?';
+          iconContainer.appendChild(fallback);
+        }
+
+        btn.appendChild(iconContainer);
+
+        // Add click event
+        btn.addEventListener('click', () => {
+          if (typeof item.function === 'function') {
+            item.function(cm);
+          }
+        });
+
+        sidebar.appendChild(btn);
+      });
+
+      document.querySelector(containerSelector).prepend(sidebar);
+    }
+
+    function makeTabDraggable(tabItem) {
+      tabItem.setAttribute('draggable', true);
+
+      tabItem.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', tabItem.dataset.tabId);
+        tabItem.style.opacity = '0.5';
+      });
+
+      tabItem.addEventListener('dragend', () => {
+        tabItem.style.opacity = '1';
+      });
+
+      tabItem.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+
+      tabItem.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedTabId = e.dataTransfer.getData('text/plain');
+        const draggedTab = document.querySelector(`.tab-item[data-tab-id='${draggedTabId}']`);
+
+        if (draggedTab && draggedTab !== tabItem) {
+          const parent = tabItem.parentNode;
+          const children = Array.from(parent.children);
+          const draggedIndex = children.indexOf(draggedTab);
+          const dropIndex = children.indexOf(tabItem);
+
+          if (draggedIndex < dropIndex) {
+            parent.insertBefore(draggedTab, tabItem.nextSibling);
+          } else {
+            parent.insertBefore(draggedTab, tabItem);
+          }
+        }
+      });
+    }
+
+    function addNewTab({
+      code = '',
+      title,
+      run = null,
+      selectedTask = null,
+      file = null,
+      selections = null,
+      marks = null,
+      scroll = null,
+      cursor = null,
+      history = null,
+      historySize = null
+    } = {}) {
+      tabCounter++;
+      const tabId = tabCounter;
+      const tabTitle = title || `Untitled-${tabId}`;
+
+      const { editor, wrapper } = createNewEditor({ code, selections, marks, scroll, cursor, history, historySize });
+      editor.scrollIntoView(editor.getCursor());
+
+      const tab = document.createElement('div');
+      tab.className = 'tab-item';
+      tab.dataset.tabId = tabId;
+
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = tabTitle;
+
+      const closeSpan = document.createElement('span');
+      closeSpan.className = 'tab-close';
+      closeSpan.innerHTML = '✕';
+
+      tab.appendChild(titleSpan);
+      tab.appendChild(closeSpan);
+      tabsList.appendChild(tab);
+
+      editors.push({ id: tabId, editor, wrapper, tab, title: tabTitle, selectedTask, run, file, selections, marks, scroll, cursor });
+
+      setActiveTab(tabId);
+
+      tab.addEventListener('click', () => setActiveTab(tabId));
+
+      titleSpan.addEventListener('dblclick', () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = titleSpan.textContent;
+        input.className = 'tab-title-input';
+        tab.replaceChild(input, titleSpan);
+        input.focus();
+        input.select();
+
+        const saveTitle = () => {
+          input.removeEventListener('blur', saveTitle);
+          input.removeEventListener('keydown', handleKeyDown);
+
+          const newTitle = input.value.trim() || `Untitled-${tabId}`;
+          titleSpan.textContent = newTitle;
+
+          const editorData = editors.find(e => e.id === tabId);
+          if (editorData) {
+            // Update the title
+            editorData.title = newTitle;
+            // ─── Update file details if available ───
+            if (editorData.file && editorData.file.path && editorData.file.name) {
+              const oldPath = editorData.file.path;
+              const lastSlash = oldPath.lastIndexOf('/');
+              const directory = oldPath.substring(0, lastSlash + 1);
+
+              // If the title doesn't have an extension, use .txt by default
+              const hasExt = /\.[a-zA-Z0-9]+$/.test(newTitle);
+              const newFileName = hasExt ? newTitle : `${newTitle}.txt`;
+
+              editorData.file.name = newFileName;
+              editorData.file.path = directory + newFileName;
+              console.log('Updated file details:', editorData.file);
+            }
+          }
+
+          // ─── Replace input back with title span ───
+          if (input.parentNode === tab) {
+            tab.replaceChild(titleSpan, input);
+          }
+        };
+
+
+        const handleKeyDown = (e) => {
+          if (e.key === 'Enter') {
+            saveTitle();
+          } else if (e.key === 'Escape') {
+            input.removeEventListener('blur', saveTitle);
+            input.removeEventListener('keydown', handleKeyDown);
+            if (input.parentNode === tab) {
+              tab.replaceChild(titleSpan, input);
+            }
+          }
+        };
+
+        input.addEventListener('blur', saveTitle);
+        input.addEventListener('keydown', handleKeyDown);
+      });
+
+      closeSpan.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTab(tabId);
+      });
+
+      makeTabDraggable(tab);
+    }
+
+    function setActiveTab(tabId) {
+      console.log("Activating tab id: ", tabId);
+      activeEditorId = tabId;
+      console.log("tabId:", tabId);
+      let activeRunResult = null;
+      editors.forEach(item => {
+        const isActive = item.id === tabId;
+        item.tab.classList.toggle('active', isActive);
+        item.wrapper.classList.toggle('active', isActive);
+        if (isActive) {
+          item.editor.focus();
+          item.editor.refresh();
+          activeRunResult = item.run;
+        }
+      });
+      const editor = getActiveEditor();
+      editor.refresh();
+      displayRunResult(activeRunResult, editor);
+      updateTaskButtonUI();
+    }
+
+
+    /*
+     * Closes the tab with the given id.
+     *
+     * @param {string} tabId - the id of the tab to close.
+     *
+     * If the tab is currently active, it will select the previous tab if available.
+     * If there are no more tabs, it will set the activeEditorId to null.
+     * The task button will be updated to reflect the new active tab.
+     */
+    function closeTab(tabId) {
+      const index = editors.findIndex(item => item.id === tabId);
+      if (index === -1) return;
+
+      const [closedItem] = editors.splice(index, 1);
+      closedItem.tab.remove();
+      closedItem.wrapper.remove();
+
+      if (activeEditorId === tabId) {
+        if (editors.length > 0) {
+          const newActiveIndex = Math.max(0, index - 1);
+          setActiveTab(editors[newActiveIndex].id);
+        } else {
+          activeEditorId = null;
+        }
+      }
+      updateTaskButtonUI();
+    }
+
+    function getActiveEditorData() {
+      if (activeEditorId === null) return null;
+      return editors.find(e => e.id === activeEditorId);
+    }
+
+    function getActiveEditor() {
+      const active = getActiveEditorData();
+      return active ? active.editor : null;
+    }
+
+    function getEditorState(editor) {
+      if (!editor) return null;
+
+      const doc = editor.getDoc();
+      const marks = doc.getAllMarks();
+      const state = {
+        value: editor.getValue(),
+        cursor: doc.getCursor(),
+        scroll: editor.getScrollInfo(),
+        selections: doc.listSelections(),
+        marks: [],
+        history: doc.getHistory(),
+        historySize: doc.historySize()
+      };
+
+      if (marks.length) {
+        // Reverse iterate so nested folds are handled correctly
+        for (let i = marks.length - 1; i >= 0; i--) {
+          const mark = marks[i];
+          if (mark.collapsed && mark.type === 'range') {
+            const range = mark.find();
+            if (range && range.from) {
+              state.marks.push(range.from);
+            }
+          }
+        }
+      }
+
+      return state;
+    }
+
+    function setEditorState(editor, state) {
+      if (!editor || !state) return;
+
+      const doc = editor.getDoc();
+
+      // Restore text content
+      if (typeof state.value === "string") {
+        editor.setValue(state.value);
+      }
+
+      if (typeof state.code === "string") {
+        editor.setValue(state.code);
+      }
+      if (state.history !== null) {
+        doc.setHistory(state.history);
+      }
+
+      // Restore selections or cursor
+      if (Array.isArray(state.selections) && state.selections.length > 0) {
+        doc.setSelections(state.selections);
+      } else if (state.cursor) {
+        doc.setCursor(state.cursor);
+      }
+
+      // Restore folded code marks
+      if (Array.isArray(state.marks) && state.marks.length > 0) {
+        for (const pos of state.marks) {
+          if (pos) editor.foldCode(pos);
+        }
+      }
+
+      // Restore scroll position
+      if (state.scroll && typeof state.scroll.top === "number") {
+        const left = state.scroll.left || 0;
+        editor.scrollTo(left, state.scroll.top);
+        console.log("Scrolling to:", left, state.scroll.top);
+      }
+    }
+
+    async function saveCurrentTab() {
+      const activeEditorData = getActiveEditorData();
+      if (!activeEditorData) {
+        showAlert('No active tab to save.');
+        return;
+      }
+      let { host, port } = defaultConfig;
+      if (runDemo) ({ host, port } = demoConfig);
+      const url = `http://${host}:${port}/java/api/save`;
+      let { title, editor, run, file, selectedTask } = activeEditorData;
+      console.log("Saving this file from save button:" + title + "File: " + file + "Task: " + selectedTask);
+      let { value, selections, marks, scroll, cursor, history, historySize } = getEditorState(editor);
+      let code = value;
+      if (file == null) {
+        openFileBrowser('save', { code: code });
+        return;
+      } else {
+        const tabData = { title, run, selectedTask, file, selections, marks, scroll, cursor, history, historySize };
+        const formData = new FormData();
+        const fileName = file?.name || `${title}.txt`;
+        const fileBlob = new File([code], fileName, { type: "text/plain" });
+        console.log(JSON.stringify(tabData, null, 2));
+        formData.append("files", fileBlob, fileName);
+        formData.append("metadata", JSON.stringify(tabData, null, 2));
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            body: formData,
+          });
+
+          if (response.ok) {
+            showAlert(`File "${fileName}" saved successfully.`);
+          } else {
+            showAlert(`Error saving file: ${await response.text()}`);
+          }
+        } catch (err) {
+          showAlert(`Failed to save: ${err.message}`);
+        }
+      }
+    }
+
+    async function saveAllTabs() {
+      if (editors.length === 0) {
+        showAlert('No tabs to save.');
+        return;
+      }
+      let { host, port } = defaultConfig;
+      if (runDemo) ({ host, port } = demoConfig);
+      const url = `http://${host}:${port}/java/api/saveAll`;
+      const formData = new FormData();
+      const filesToSave = editors.map(({ title, editor, run, selectedTask, file }) => {
+        const { value, selections, marks, scroll, cursor, history, historySize } = getEditorState(editor);
+        const code = value;
+        const fileName = file?.name || `${title}.txt`;
+        const fileBlob = new File([code], fileName, { type: "text/plain" });
+        formData.append("files", fileBlob, fileName);
+        return { title, run, selectedTask, file, selections, marks, scroll, cursor, history, historySize };
+      });
+
+      formData.append("metadata", JSON.stringify({
+        codes: filesToSave,
+        time: Math.floor(Date.now() / 1000),
+        sessionKey: sessionKey
+      }));
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          showAlert('All tabs saved successfully.');
+        } else {
+          showAlert(`Error saving tabs: ${await response.text()}`);
+        }
+      } catch (err) {
+        showAlert(`Failed to save tabs: ${err.message}`);
+      }
+    }
+
+    function addBeautifyIgnoreForTripleQuotes(code) {
+      return code.replace(/( *"""[\s\S]*?""" *;?)/g, '/* beautify preserve:start */$1/* beautify preserve:end */');
+    }
+
+    function removeBeautifyIgnoreComments(code) {
+      return code.replace(/\n?\t*?\/\*\s*beautify\s+preserve:(start|end)\s*\*\//g, '');
+    }
+    function formatActiveEditor() {
+      const activeEditor = getActiveEditor();
+      if (activeEditor) {
+        // 1. Get the current text from the editor
+        const javaText = activeEditor.getValue();
+        const javaTextEscaped = addBeautifyIgnoreForTripleQuotes(javaText);
+        const scrollInfo = activeEditor.getScrollInfo();
+        const contentScrollableHeight = scrollInfo.height - scrollInfo.clientHeight;
+        let scrollPercentage = 0;
+
+        if (contentScrollableHeight > 0) {
+          scrollPercentage = scrollInfo.top / contentScrollableHeight;
+        }
+        // 2. Format the text using Prettier
+        const formattedText = js_beautify(javaTextEscaped, {
+          // indent_size: 1,
+          // indent_char: "  ",
+          indent_with_tabs: true
+          , brace_style: "none,preserve-inline"
+          , preserve_newlines: true
+          , max_preserve_newlines: 4
+        });
+
+        // 3. Set the formatted text back into the editor
+        javaTextRemoved = removeBeautifyIgnoreComments(formattedText);
+        activeEditor.setValue(javaTextRemoved);
+        const newScrollInfo = activeEditor.getScrollInfo();
+        const newContentScrollableHeight = newScrollInfo.height - newScrollInfo.clientHeight;
+
+        // Calculate the new 'top' scroll value
+        const newScrollTop = newContentScrollableHeight * scrollPercentage;
+
+        // c. Scroll the editor to the new absolute position
+        activeEditor.scrollTo(scrollInfo.left, newScrollTop);
+        // activeEditor.focus();
+      }
+    }
+
+    async function loadSession(sessionData) {
+      if (sessionData && Array.isArray(sessionData.codes)) {
+        // Clear existing tabs before loading new ones
+        while (editors.length > 0) {
+          closeTab(editors[0].id);
+        }
+
+        let { host, port } = defaultConfig;
+        if (runDemo) ({ host, port } = demoConfig);
+        const readUrl = `http://${host}:${port}/fileBrowser/api/read`;
+
+        const tabPromises = sessionData.codes.map(async tabData => {
+          let code = tabData.code || null; // Fallback for tabs without a file
+          if (tabData.file && tabData.file.path) {
+            try {
+              const response = await fetch(readUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: tabData.file.path })
+              });
+              if (response.ok) {
+                code = await response.text();
+              } else {
+                showAlert(`Failed to load file content for ${tabData.file.path}`);
+                console.error(`Failed to load file content for ${tabData.file.path}`);
+              }
+            } catch (err) {
+              showAlert(`Error fetching file content for ${tabData.file.path}:`, err);
+              console.error(`Error fetching file content for ${tabData.file.path}:`, err);
+            }
+          }
+
+          return {
+            code: code,
+            title: tabData.title,
+            run: tabData.run,
+            selectedTask: tabData.selectedTask,
+            file: tabData.file,
+            selections: tabData.selections,
+            marks: tabData.marks,
+            scroll: tabData.scroll,
+            cursor: tabData.cursor,
+            history: tabData.history,
+            historySize: tabData.historySize
+            // title, run = null, selectedTask = null, file null, selections = null, marks = null, scroll = null, cursor = null
+          };
+        });
+
+        const tabsData = await Promise.all(tabPromises);
+        let failedTab = [];
+        let successTab = [];
+        tabsData.forEach(tabData => {
+          if (tabData.code != null) {
+            addNewTab(tabData);
+            successTab.push(tabData.title);
+          } else {
+            failedTab.push(tabData.title);
+          }
+        });
+
+        // Activate the first tab if it exists
+        if (editors.length > 0) {
+          setActiveTab(editors[0].id);
+        }
+        if (failedTab.length > 0) {
+          showAlert("Failed to load:\n" + failedTab.join("\n"));
+        } else {
+          sessionKey = sessionData.sessionKey;
+          showAlert(sessionKey + ' session loaded successfully.');
+        }
+        console.log(successTab.length);
+        if (successTab.length < 1) {
+          addNewTab();
+        }
+      } else {
+        showAlert('Invalid session data format.');
+        console.error("Invalid session data:", sessionData);
+      }
+    }
+
+    async function loadLastSession() {
+      try {
+        let { host, port } = defaultConfig;
+        if (runDemo) ({ host, port } = demoConfig);
+        const url = `http://${host}:${port}/java/api/loadLastSession`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const sessionData = await response.json();
+          if (sessionData && sessionData.codes && sessionData.codes.length > 0) {
+            loadSession(sessionData);
+          } else {
+            addNewTab(); // Fallback to a new tab if session is empty
+          }
+        } else {
+          showAlert("Failed loading last session.");
+          addNewTab(); // Fallback if the request fails
+        }
+      } catch (err) {
+        showAlert("Failed loading last session.\n\n" + err);
+        console.error('Failed to load last session:', err);
+        addNewTab(); // Fallback in case of an error
+      }
+    }
+
+    function clearEditorErrors(editor) {
+      // 1️⃣ Clear built-in lint markers
+      if (typeof editor.performLint === 'function') {
+        editor.performLint([]);
+      }
+
+      // 2️⃣ Clear manual line highlights and gutter icons
+      const doc = editor.getDoc();
+      const lastLine = doc.lineCount();
+      for (let i = 0; i < lastLine; i++) {
+        editor.removeLineClass(i, "background", "cm-error-line");
+        editor.removeLineClass(i, "gutter", "cm-error-gutter");
+        editor.setGutterMarker(i, "CodeMirror-lint-markers", null);
+      }
+    }
+    function escapeHtmlAttr(str) {
+      if (typeof str !== "string") return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function escapeHtml(str) {
+      if (typeof str !== "string") return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function unescapeHtml(str) {
+      return str
+        .replace(/&gt;/g, ">")
+        .replace(/&lt;/g, "<")
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, "&");
+    }
+    function displayRunResult(data, editor) {
+      const isEditor = typeof editor === "object";
+      if (!data) {
+        clearOutputs();
+        return;
+      }
+
+      if (!isEditor) {
+        const activeEditorData = editors.find((e) => e.id === editor);
+        editor = activeEditorData ? activeEditorData.editor : null;
+        console.log("Editor with ID:", editor);
+      }
+
+      clearEditorErrors(editor);
+
+      if (Array.isArray(data.variables)) renderVariables(data.variables);
+      else varsList.innerHTML = '<li class="notice">No variables key</li>';
+      retEl.textContent = data.return || "";
+      const errorText = data.error || "";
+      console.log("Error text:", errorText);
+      errEl.textContent = errorText;
+
+      if (!isEditor || !data.error) return;
+
+      const regexes = [
+        /.*(?<replace>line (?<line>\d+), column (?<column>\d+)).*/gi,
+        /.*(?<=at Line: )(?<replace>(?<line>\d+)).*/gi,
+      ];
+
+      const errors = [];
+      let htmlOutput = escapeHtml(errorText);
+
+      // 🔹 Extract and replace using named groups
+      for (const regex of regexes) {
+        const matches = Array.from(htmlOutput.matchAll(regex));
+        for (const match of matches) {
+          const groups = match.groups || {};
+          const line = groups.line ? parseInt(groups.line, 10) - 1 : 0;
+          const ch = groups.column ? parseInt(groups.column, 10) - 1 : 0;
+          const replaceText = groups.replace?.trim() || "";
+          const message = match[0].trim();
+
+          errors.push({ line, ch, message });
+
+          const clickable = `<span class="err-link" data-line="${line}" data-ch="${ch}" data-msg="${message}">${replaceText}</span>`;
+          htmlOutput = htmlOutput.replace(replaceText, clickable);
+        }
+      }
+
+      errEl.innerHTML = htmlOutput;
+
+      // 🔹 Add click handler to navigate
+      errEl.querySelectorAll(".err-link").forEach((el) => {
+        el.addEventListener("click", (ev) => {
+          const line = parseInt(ev.currentTarget.dataset.line, 10);
+          const ch = parseInt(ev.currentTarget.dataset.ch, 10);
+          editor.focus();
+          editor.setCursor({ line, ch });
+          editor.scrollIntoView({ line, ch }, 100);
+        });
+      });
+
+      // 🔹 Clear previous error highlights
+      const doc = editor.getDoc();
+      const lastLine = doc.lineCount();
+      for (let i = 0; i < lastLine; i++) {
+        editor.removeLineClass(i, "background", "cm-error-line");
+        editor.removeLineClass(i, "gutter", "cm-error-gutter");
+        editor.setGutterMarker(i, "CodeMirror-lint-markers", null);
+      }
+
+      // 🔹 Create global tooltip element (once)
+      let tooltip = document.querySelector(".custom-tooltip");
+      if (!tooltip) {
+        tooltip = document.createElement("div");
+        tooltip.className = "custom-tooltip";
+        document.body.appendChild(tooltip);
+      }
+
+      // 🔹 Apply new highlights + markers
+      errors.forEach((err) => {
+        editor.addLineClass(err.line, "background", "cm-error-line");
+        editor.addLineClass(err.line, "gutter", "cm-error-gutter");
+
+        const marker = document.createElement("div");
+        marker.className = "cm-error-dot";
+        marker.dataset.tooltip = unescapeHtml(err.message);
+
+        // Custom tooltip behavior
+        marker.addEventListener("mouseenter", (ev) => {
+          tooltip.textContent = ev.currentTarget.dataset.tooltip;
+          tooltip.style.opacity = "1";
+          tooltip.style.display = "block";
+        });
+        marker.addEventListener("mousemove", (ev) => {
+          tooltip.style.left = `${ev.pageX + 10}px`;
+          tooltip.style.top = `${ev.pageY + 10}px`;
+        });
+        marker.addEventListener("mouseleave", () => {
+          tooltip.style.opacity = "0";
+          tooltip.style.display = "none";
+        });
+
+        editor.setGutterMarker(err.line, "CodeMirror-lint-markers", marker);
+      });
+
+      // 🔹 Focus + scroll to the first error
+      if (errors.length > 0) {
+        const first = errors[0];
+        editor.focus();
+        editor.setCursor({ line: first.line, ch: first.ch });
+        editor.scrollIntoView({ line: first.line, ch: first.ch }, 100);
+      }
+    }
+
+    // --- File Browser Functions ---
+    async function browsePath(path) {
+      try {
+        let { host, port } = defaultConfig;
+        if (runDemo) ({ host, port } = demoConfig);
+        const url = `http://${host}:${port}/fileBrowser/api/list`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          lastFolderPath = data.path;
+          renderFileList(data.path, data.items);
+        } else {
+          showAlert(`Error listing path: ${await response.text()}`);
+        }
+      } catch (err) {
+        showAlert(`Failed to browse path: ${err.message}`);
+        console.error('Browse path failed:', err);
+      }
+    }
+
+    function renderFileList(path, items) {
+      currentPathEl.textContent = path;
+      fileListEl.innerHTML = '';
+
+      // Add parent directory navigation
+      if (path !== '/' && path !== '/storage/emulated/0') {
+        const parentPath = path.substring(0, path.lastIndexOf('/')) || '/';
+        const li = document.createElement('li');
+        li.className = 'file-item';
+        li.innerHTML = `<span class="icon">..</span> <span class="name">Parent Directory</span>`;
+        li.addEventListener('click', () => browsePath(parentPath));
+        fileListEl.appendChild(li);
+      }
+
+      items.sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'folder' ? -1 : 1;
+      }).forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'file-item';
+        li.addEventListener('click', () => handleFileClick(item));
+
+        const icon = item.type === 'folder' ? '📁' : '📄';
+        const iconClass = item.type === 'folder' ? 'type-folder' : 'type-file';
+
+        let metaText = '';
+        if (item.type === 'folder') {
+          const fileCount = parseInt(item.files, 10);
+          if (fileCount > 0) {
+            metaText = `${fileCount} file${fileCount > 1 ? 's' : ''}`;
+          }
+        } else {
+          metaText = formatSize(item.size);
+        }
+        const dateText = formatDate(item.date);
+
+        li.innerHTML = `
+          <span class="icon ${iconClass}">${icon}</span>
+          <div class="file-details">
+            <span class="name">${item.name}</span>
+            <div class="file-meta">
+              ${metaText ? `<span>${metaText}</span>` : ''}
+              ${dateText ? `<span>${dateText}</span>` : ''}
+            </div>
+          </div>
+        `;
+
+        fileListEl.appendChild(li);
+      });
+    }
+
+    async function handleFileClick(item) {
+      fileFilterInput.value = ''; // Clear the filter on item click
+      fileFilterInput.focus();
+      if (item.type === 'folder') {
+        browsePath(item.path);
+      } else { // item.type === 'file'
+        if (browseMode === 'save' && fileToSave) {
+          const fileName = prompt("Enter file name to save/overwrite:", item.name);
+
+          if (fileName) {
+
+            const path = item.path.substring(0, item.path.lastIndexOf('/') + 1) + fileName;
+
+            console.log("Waiting file path:" + path);
+            try {
+              let { host, port } = defaultConfig;
+              if (runDemo) ({ host, port } = demoConfig);
+
+
+              // Update active editor data before saving session
+              const activeEditorData = getActiveEditorData();
+              const fileData = { path, name: fileName };
+              if (activeEditorData) {
+                activeEditorData.file = fileData;
+                activeEditorData.title = fileName;
+                activeEditorData.tab.querySelector('span').textContent = fileName;
+              }
+              hideBrowseFileModal();
+              saveCurrentTab(); zzzz
+
+
+            } catch (err) {
+              showAlert(`Failed to save: ${err.message}`);
+            }
+          }
+        }
+        else {
+          // It's a file in 'open' mode, read it and open in a new tab
+          try {
+            let { host, port } = defaultConfig;
+            if (runDemo) ({ host, port } = demoConfig);
+            const url = `http://${host}:${port}/fileBrowser/api/read`;
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: item.path })
+            });
+            if (response.ok) {
+              const fileContent = await response.text();
+              addNewTab({
+                code: fileContent,
+                title: item.name,
+                file: { path: item.path, name: item.name }
+              });
+              hideBrowseFileModal();
+            } else {
+              showAlert(`Error reading file: ${await response.text()}`);
+            }
+          } catch (err) {
+            showAlert(`Failed to read file: ${err.message}`);
+            console.error('Read file failed:', err);
+          }
+        }
+      }
+    }
+
+    function openFileBrowser(mode = 'open', dataToSave = null) {
+      browseMode = mode;
+      fileToSave = dataToSave;
+      if (mode === 'save') {
+        saveFileFab.style.display = 'block';
+      } else {
+        saveFileFab.style.display = 'none';
+      }
+      browsePath(lastFolderPath);
+      browseFileModal.style.display = 'flex';
+      fileFilterInput.focus();
+    }
+
+    function hideBrowseFileModal() {
+      browseFileModal.style.display = 'none';
+    }
+
+    async function createFolder() {
+      const newName = newFolderNameEl.value.trim();
+      if (!newName) {
+        showAlert('Please enter a folder name.');
+        return;
+      }
+      const path = `${lastFolderPath}/${newName}`;
+      try {
+        let { host, port } = defaultConfig;
+        if (runDemo) ({ host, port } = demoConfig);
+        const url = `http://${host}:${port}/fileBrowser/api/mkdir`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path })
+        });
+        if (response.ok) {
+          showAlert(`Folder "${newName}" created.`);
+          newFolderNameEl.value = '';
+          browsePath(lastFolderPath); // Refresh the list
+        } else {
+          showAlert(`Error creating folder: ${await response.text()}`);
+        }
+      } catch (err) {
+        showAlert(`Failed to create folder: ${err.message}`);
+      }
+    }
+
+    // --- UI & Helper Functions ---
+
+    /**
+ * Extract data from XML using a single config object with type casting.
+ *
+ * @param {string} xmlString - The XML input.
+ * @param {Object} config - Extraction configuration.
+ * @param {string} config.match - XPath match expression.
+ * @param {Array<{key:string, xpath:string, type?:string}>} config.patterns - Extraction rules.
+ *   - type can be: "string" (default), "number", "boolean", "integer", or "null"
+ * @returns {Array<Object>} Extracted array of objects.
+ */
+    async function extractFromXml(xmlString, config) {
+      const doc = new DOMParser().parseFromString(xmlString, "application/xml");
+      const { match, patterns } = config;
+      const results = [];
+
+      const matchedNodes = doc.evaluate(
+        match,
+        doc,
+        null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+        null
+      );
+
+      // Helper: convert value based on declared type
+      const castValue = (value, type) => {
+        if (value == null || value === "") return null;
+        switch (type) {
+          case "number":
+          case "numeric":
+            return isNaN(value) ? null : Number(value);
+          case "integer":
+            return isNaN(value) ? null : parseInt(value, 10);
+          case "boolean":
+            return ["1", "true", "yes"].includes(value.toLowerCase());
+          case "null":
+            return null;
+          default:
+            return value; // string or unspecified
+        }
+      };
+
+      for (let i = 0; i < matchedNodes.snapshotLength; i++) {
+        const node = matchedNodes.snapshotItem(i);
+        const item = {};
+
+        for (const { key, xpath, type = "string" } of patterns) {
+          const res = doc.evaluate(
+            xpath,
+            node,
+            null,
+            XPathResult.STRING_TYPE,
+            null
+          );
+
+          const rawValue = res ? res.stringValue : null;
+          item[key] = castValue(rawValue, type);
+        }
+
+        results.push(item);
+      }
+
+      return results;
+    }
+
+    /*
+    Taskernet pattern https://taskernet.com/shares/?user={userId}&id={shareId}
+
+/**
+ * Extract Tasker data from a Taskernet share URL.
+ * 
+ * Example:
+ * https://taskernet.com/shares/?user=AS35m8mzep6ZT53%2BqNrzeLiaw4Tx1L4o%2BrgzYDR5Rg4cuz25FIQvQrdsluWlrxmTqBfm&id=Project%3AAccessibility+Action+With+Java
+ */
+    async function extractTaskernet(codeUrl) {
+      // 1️⃣ Parse the URL and extract userId & shareId
+      const urlObj = new URL(codeUrl);
+      const userId = decodeURIComponent(urlObj.searchParams.get("user"));
+      const shareId = decodeURIComponent(urlObj.searchParams.get("id"));
+
+      if (!userId || !shareId) {
+        throw new Error("Invalid Taskernet URL — missing user or id parameters.");
+      }
+
+      // 2️⃣ Build the API URL
+      const apiUrl = `https://taskernet.com/_ah/api/datashare/v1/sharedata/${encodeURIComponent(
+        userId
+      )}/${encodeURIComponent(shareId)}?a=0&xml=true`;
+      console.log("API URL:", apiUrl);
+
+      // 3️⃣ Fetch and parse JSON from Taskernet
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Taskernet request failed: ${response.status}`);
+      }
+
+      const jsonData = await response.json();
+
+      // 4️⃣ Extract XML data from response
+      const xmlData = jsonData.shareData;
+      if (!xmlData) {
+        throw new Error("No shareData field found in Taskernet response.");
+      }
+
+      // 5️⃣ Define your XPath extraction config
+      const config = {
+        match: "//Task/Action[code='474']/Str[@sr='arg0']",
+        patterns: [
+          { key: "task_id", xpath: "../../id", type: "integer" },
+          { key: "task_name", xpath: "../../nme", type: "string" },
+          { key: "action", xpath: "substring-after(../@sr,'act')", type: "integer" },
+          { key: "code", xpath: "string(.)", type: "string" },
+          { key: "return", xpath: "string(../Str[@sr='arg1'])", type: "string" },
+        ],
+      };
+
+      // 6️⃣ Use your extractor to parse data
+      const result = extractFromXml(xmlData, config);
+      return result;
+    }
+
+
+    function formatSize(bytes) {
+      bytes = parseInt(bytes, 10);
+      if (bytes < 0 || isNaN(bytes)) return '';
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function formatDate(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(parseInt(timestamp, 10));
+      return date.toLocaleDateString(undefined, {
+        year: '2-digit',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    function updateTaskButtonUI() {
+      const activeEditorData = getActiveEditorData();
+      if (activeEditorData && activeEditorData.selectedTask) {
+        selectTaskBtn.textContent = activeEditorData.selectedTask;
+      } else {
+        selectTaskBtn.textContent = 'Select Task';
+      }
+    }
+
+
+    const updateVariableCount = () => {
+      // Find the count of list items (excluding those with .notice)
+      const variableCount = varsList?.querySelectorAll("li:not(.notice)")?.length || 0;
+      const variableCountEl = el("variable-count");
+
+      // Guard clauses to prevent accidental updates
+      if (!variableCountEl) return; // Skip if element doesn't exist
+      if (variableCount <= 0) {     // Hide if count is 0 or invalid
+        variableCountEl.style.display = "none";
+        return;
+      }
+
+      // Update safely only when element exists and count > 0
+      variableCountEl.textContent = variableCount;
+      variableCountEl.style.display = "inline-block";
+    };
+
+    const observeVariableLists = () => {
+      const cards = document.querySelectorAll(".card");
+
+      cards.forEach(card => {
+        const varsList = card.querySelector(".vars-list");
+        if (!varsList) return;
+
+        const observer = new MutationObserver(updateVariableCount);
+        observer.observe(varsList, {
+          childList: true,
+          subtree: false
+        });
+      });
+
+      // Initial update
+      updateVariableCount();
+    };
+
+    document.addEventListener("DOMContentLoaded", observeVariableLists);
+
+    const activeAlerts = [];
+
+    function showAlert(msg, time = 2500) {
+      const d = document.createElement('div');
+      Object.assign(d.style, {
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: '#333',
+        color: '#fff',
+        padding: '8px 14px',
+        borderRadius: '6px',
+        zIndex: 9999,
+        opacity: '0',
+        transition: 'opacity .3s, transform .3s',
+        pointerEvents: 'none',
+      });
+      d.textContent = msg;
+      document.body.appendChild(d);
+
+      // Push new alert to stack
+      activeAlerts.push(d);
+      updateAlertPositions();
+
+      // Fade in
+      requestAnimationFrame(() => (d.style.opacity = '1'));
+
+      // Auto remove after time
+      setTimeout(() => {
+        d.style.opacity = '0';
+        setTimeout(() => {
+          d.remove();
+          // Remove from array and re-stack others
+          const i = activeAlerts.indexOf(d);
+          if (i !== -1) activeAlerts.splice(i, 1);
+          updateAlertPositions();
+        }, 100);
+      }, time);
+    }
+
+    function updateAlertPositions() {
+      activeAlerts.forEach((alert, i) => {
+        // Base position (bottom offset for stacking)
+        const offset = 20 + i * (alert.offsetHeight + 10);
+        alert.style.transform = `translate(-50%, -${offset}px)`;
+      });
+    }
+
+    function getImportsFromEditor(editorInstance) {
+      if (!editorInstance) return [];
+      const code = editorInstance.getValue();
+      const lines = code.split("\n");
+      const imports = [];
+      for (const line of lines) {
+        const match = line.trim().match(/^import\s+([a-zA-Z0-9_.\*]+)\s*;?/);
+        if (match) imports.push(match[1]);
+      }
+      return imports;
+    }
+
+    function status(msg) {
+      statusEl.textContent = msg;
+    }
+
+    function clearOutputs() {
+      varsList.innerHTML = '<li class="notice">No variables yet.</li>';
+      retEl.textContent = '';
+      errEl.textContent = '';
+    }
+
+    function showModal(title, text) {
+      modalContent.textContent = text;
+      modalTitle.textContent = title;
+      modal.style.display = 'flex';
+    }
+
+    function hideModal() {
+      modal.style.display = 'none';
+    }
+
+    function copyWithFallback(btn, getText) {
+      const text = String(getText() ?? '').trim();
+      if (!text) {
+        const prev = btn.textContent;
+        btn.textContent = 'Empty';
+        setTimeout(() => btn.textContent = prev, 900);
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          const prev = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = prev, 1200);
+        }).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
+
+      function fallbackCopy() {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          const success = document.execCommand('copy');
+          const prev = btn.textContent;
+          btn.textContent = success ? 'Copied!' : 'Failed';
+          setTimeout(() => btn.textContent = prev, 1200);
+        } catch {
+          alert('Copy failed');
+        } finally {
+          document.body.removeChild(ta);
+        }
+      }
+    }
+
+    function renderVariables(list) {
+      varsList.innerHTML = '';
+      if (!Array.isArray(list) || !list.length) {
+        varsList.innerHTML = '<li class="notice">No variables yet.</li>';
+        return;
+      }
+      list.forEach(v => {
+        const li = document.createElement('li');
+        li.className = 'var-item';
+        const left = document.createElement('div');
+        left.className = 'var-left';
+        left.innerHTML = `<div class="var-name">${v.name || '(no name)'}</div><div class="preview">${truncate(v.value, 160)}</div>`;
+        const right = document.createElement('div');
+        const btn = document.createElement('button');
+        btn.className = 'btn-ghost';
+        btn.textContent = 'Copy';
+        btn.addEventListener('click', () => copyWithFallback(copyBtn, () => String(v.value)));
+        let isDragging = false;
+        left.addEventListener('mousedown', () => (isDragging = false));
+        left.addEventListener('mousemove', () => (isDragging = true));
+        left.addEventListener('mouseup', () => {
+          if (!isDragging) showModal(v.name || 'value', String(v.value));
+        });
+        right.appendChild(btn);
+        li.appendChild(left);
+        li.appendChild(right);
+        varsList.appendChild(li);
+      });
+      // updateVariableCount();
+    }
+
+    async function runCode() {
+      let { host, port } = defaultConfig;
+      if (runDemo) ({ host, port } = demoConfig);
+      const url = `http://${host}:${port}/java/api/run`;
+      status('Sending…');
+      clearOutputs();
+      const FETCH_TIMEOUT_MS = 50000;
+
+      try {
+        const activeEditor = getActiveEditor();
+        console.log(activeEditor);
+        if (!activeEditor) {
+          status('No active editor.');
+          return;
+        }
+        const body = { code: activeEditor.getValue() };
+        const activeEditorData = getActiveEditorData();
+        if (activeEditorData && activeEditorData.selectedTask) {
+          body.task = activeEditorData.selectedTask;
+        }
+
+        const controller = new AbortController();
+        const signal = controller.signal;
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+        let resp;
+        try {
+          resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal,
+          });
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (err.name === 'AbortError') throw new Error(`Request timed out after ${FETCH_TIMEOUT_MS} ms`);
+          throw err;
+        }
+
+        clearTimeout(timeoutId);
+        const text = await resp.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error('Not JSON:\n' + text);
+        }
+
+        if (activeEditorData) {
+          activeEditorData.run = data;
+        }
+
+        displayRunResult(data, activeEditor);
+        status('Done');
+      } catch (e) {
+        status('Error');
+        errEl.textContent = e.message;
+      }
+    }
+
+    async function fetchTasks() {
+      try {
+        let { host, port } = defaultConfig;
+        if (runDemo) ({ host, port } = demoConfig);
+        const url = `http://${host}:${port}/java/api/tasks`;
+        const resp = await fetch(url);
+        const tasks = await resp.json();
+        return Array.isArray(tasks) ? tasks : [];
+      } catch (e) {
+        console.error('fetchTasks', e);
+        return [];
+      }
+    }
+
+    function showTasksModal(tasks) {
+      tasksList.innerHTML = '';
+      tasks.forEach(t => {
+        const btn = document.createElement('li');
+        btn.className = 'task-item';
+        btn.textContent = t;
+        btn.addEventListener('click', () => {
+          const activeEditorData = getActiveEditorData();
+          if (activeEditorData) {
+            activeEditorData.selectedTask = t;
+            updateTaskButtonUI();
+            status(`Task selected: ${t}`);
+          }
+          hideTasksModal();
+        });
+        tasksList.appendChild(btn);
+      });
+      taskFilter.value = '';
+      tasksModal.style.display = 'flex';
+      taskFilter.focus();
+    }
+
+    function hideTasksModal() {
+      tasksModal.style.display = 'none';
+    }
+
+    tasksModal.addEventListener('click', e => {
+      hideTasksModal();
+    })
+
+    // --- Event Listeners ---
+    saveFileFab.addEventListener('click', async () => {
+      if (browseMode === 'save' && fileToSave) {
+        const activeEditorData = getActiveEditorData();
+        const fileName = prompt("Enter file name:", activeEditorData.title);
+        if (fileName) {
+          const path = `${lastFolderPath}/${fileName}`;
+          try {
+            const activeEditorData = getActiveEditorData();
+            if (activeEditorData) {
+              activeEditorData.file = { path, name: fileName };
+              activeEditorData.title = fileName;
+              activeEditorData.tab.querySelector('span').textContent = fileName;
+            }
+
+            hideBrowseFileModal();
+            saveCurrentTab();
+          } catch (err) {
+            showAlert(`Failed to save file: ${err.message}`);
+          }
+        }
+      }
+    });
+
+
+    addTabBtn.addEventListener('click', () => addNewTab());
+    saveAllBtn.addEventListener('click', saveAllTabs);
+    openFileBtn.addEventListener('click', () => openFileBrowser('open'));
+    closeBrowseFileModal.addEventListener('click', hideBrowseFileModal);
+    browseFileModal.addEventListener('click', e => {
+      if (e.target === browseFileModal) hideBrowseFileModal();
+    });
+    mkdirBtn.addEventListener('click', createFolder);
+    fileFilterInput.addEventListener('input', () => {
+      const filterText = fileFilterInput.value.toLowerCase();
+      const items = fileListEl.getElementsByTagName('li');
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const itemName = item.querySelector('.name').textContent
+        // Match the filter text with the file/folder name
+        if (itemName.toLowerCase().includes(filterText)) {
+          item.style.display = 'flex'; // Show item
+        } else {
+          item.style.display = 'none'; // Hide item
+        }
+      }
+    });
+    // loadSessionBtn.addEventListener('click', loadLastSession);
+    runBtn.addEventListener('click', runCode);
+
+    // clearBtn.addEventListener('click', () => {
+    //   const activeEditor = getActiveEditor();
+    //   if (activeEditor) {
+    //     activeEditor.setValue('');
+    //     activeEditor.focus();
+    //   }
+    //   clearOutputs();
+    //   const activeEditorData = getActiveEditorData();
+    //   if (activeEditorData) {
+    //     activeEditorData.selectedTask = null;
+    //   }
+    //   updateTaskButtonUI();
+    //   status('Cleared');
+    // });
+
+    copyReturnBtn.addEventListener('click', () => copyWithFallback(copyReturnBtn, () => retEl.textContent));
+    copyErrorBtn.addEventListener('click', () => copyWithFallback(copyErrorBtn, () => errEl.textContent));
+    copyBtn.addEventListener('click', () => copyWithFallback(copyBtn, () => modalContent.textContent));
+    closeModal.addEventListener('click', hideModal);
+    modal.addEventListener('click', e => {
+      if (e.target === modal) hideModal();
+    });
+    selectTaskBtn.addEventListener('click', async () => {
+      const tasks = await fetchTasks();
+      showTasksModal(tasks);
+    });
+    closeTasksBtn.addEventListener('click', hideTasksModal);
+    taskFilter.addEventListener('input', () => {
+      const filter = taskFilter.value.toLowerCase();
+      Array.from(tasksList.children).forEach(btn => {
+        btn.style.display = btn.textContent.toLowerCase().includes(filter) ? 'block' : 'none';
+      });
+    });
+    selectTaskBtn.addEventListener('mouseover', () => {
+      const activeEditorData = getActiveEditorData();
+      if (activeEditorData && activeEditorData.selectedTask) {
+        selectTaskBtn.textContent = 'Change Task';
+      }
+    });
+    selectTaskBtn.addEventListener('mouseout', () => {
+      updateTaskButtonUI();
+    });
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runCode();
+      }
+    }
+    );
+
+    // --- Output Panel Logic ---
+    document.addEventListener("DOMContentLoaded", () => {
+      const sections = document.querySelectorAll(".mb-8");
+      const buttons = { "error-btn": 0, "return-btn": 1, "variable-btn": 2 };
+      const errorBtn = el("error-btn"), returnBtn = el("return-btn"), varBtn = el("variable-btn");
+      const errPre = el("err"), retPre = el("ret"), varsList = el("vars");
+
+      // Helper to activate a section and highlight its button
+      function activate(index, highlight = "active") {
+        sections.forEach((s, i) => s.classList.toggle("active", i === index));
+        document.querySelectorAll(".btn-ghost").forEach(b => b.classList.remove("active"));
+        const btnId = Object.keys(buttons)[index];
+        el(btnId).classList.add(highlight);
+      }
+
+      // Updates buttons + section states dynamically
+      function updateView() {
+        const hasError = errPre.textContent.trim().length > 0;
+        const hasReturn = retPre.textContent.trim().length > 0;
+        const hasVars = varsList.querySelectorAll("li:not(.notice)").length > 0;
+
+        // Reset all button states
+        document.querySelectorAll(".btn-ghost").forEach(b => b.classList.remove("active", "error-active"));
+
+        // Prioritize error > return > variable
+        if (hasError) {
+          errorBtn.classList.add("error-active");
+          activate(buttons["error-btn"], "error-active");
+          return;
+        }
+
+        if (hasReturn) {
+          activate(buttons["return-btn"], "active");
+          return;
+        }
+
+        if (hasVars) {
+          activate(buttons["variable-btn"], "active");
+          return;
+        }
+
+        // If no data, deactivate all
+        sections.forEach(s => s.classList.remove("active"));
+      }
+
+      // Observe content changes to dynamically refresh states
+      const observer = new MutationObserver(() => updateView());
+      observer.observe(errPre, { childList: true, characterData: true, subtree: true });
+      observer.observe(retPre, { childList: true, characterData: true, subtree: true });
+      observer.observe(varsList, { childList: true, subtree: true });
+
+      // Handle button clicks
+      for (const [id, index] of Object.entries(buttons)) {
+        el(id).addEventListener("click", () => {
+          const hasError = errPre.textContent.trim().length > 0;
+
+          // Always clear highlight states first
+          document.querySelectorAll(".btn-ghost").forEach(b => b.classList.remove("active", "error-active"));
+
+          // Show the clicked section
+          sections.forEach((s, i) => s.classList.toggle("active", i === index));
+          el(id).classList.add("active");
+
+          // Keep error highlighted even when switching sections
+          if (hasError) errorBtn.classList.add("error-active");
+        });
+      }
+
+      // Initial sync
+      updateView();
+    });
+
+    // --- Initial Load ---
+    loadLastSession();
+
+    function enableTabDragging() {
+      const tabList = document.getElementById('tabs-list');
+
+      let draggedItem = null;
+
+      tabList.addEventListener('dragstart', (e) => {
+        draggedItem = e.target;
+        setTimeout(() => {
+          draggedItem.style.opacity = '0.5';
+        }, 0);
+      });
+
+      tabList.addEventListener('dragend', () => {
+        draggedItem.style.opacity = '1';
+        draggedItem = null;
+      });
+
+      tabList.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Allow drop
+      });
+
+      tabList.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.target.classList.contains('tab-item') && e.target !== draggedItem) {
+          const dropTarget = e.target;
+          const parent = dropTarget.parentNode;
+
+          // Determine insert position
+          const children = Array.from(parent.children);
+          const draggedIndex = children.indexOf(draggedItem);
+          const dropIndex = children.indexOf(dropTarget);
+
+          if (draggedIndex < dropIndex) {
+            parent.insertBefore(draggedItem, dropTarget.nextSibling);
+          } else {
+            parent.insertBefore(draggedItem, dropTarget);
+          }
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      enableTabDragging();
+    });
+
+
+    if (runDemo) showAlert("Running demo: " + demoConfig.host + ":" + demoConfig.port);
+
+    // Open modal on button click
+    openImportBtn.addEventListener('click', () => {
+      importCodeModal.style.display = 'flex';
+      codeUrlInput.value = '';
+      codeUrlInput.focus();
+    });
+
+    closeImportCodeModal.addEventListener('click', () => {
+      importCodeModal.style.display = 'none';
+    });
+
+    // Close modal
+    importCodeModal.addEventListener('click', e => {
+      if (e.target === importCodeModal) importCodeModal.style.display = 'none';
+    });
+
+    // Fetch code from URL
+    document.getElementById('importCode').addEventListener('click', async () => {
+      const urlInput = document.getElementById('codeUrl');
+      const codeUrl = urlInput.value.trim();
+
+      if (!codeUrl) {
+        showAlert('Please enter a valid URL.'); // Changed for general use
+        return;
+      }
+
+      // Regex to match the specified Taskernet URL pattern
+      const taskernetRegex = /^https:\/\/taskernet\.com\/shares\/\?user=.+&id=.+/;
+
+      try {
+        if (taskernetRegex.test(codeUrl)) {
+          // --- CONDITION 1: Taskernet URL ---
+          // This is the sequence you provided for matching URLs
+          const tasks = await extractTaskernet(codeUrl);
+          if (tasks && tasks.length > 0) {
+            tasks.forEach(task => {
+              const action_number = task.action + 1;
+              const title = task.task_name
+                ? `${task.task_name} [@${action_number}].bsh`
+                : `[@${task.task_id + 1}].bsh`;
+              addNewTab({ code: task.code, title });
+            });
+            showAlert('Taskernet data loaded successfully.');
+          } else {
+            showAlert('No java codes found in the provided Taskernet URL.');
+          }
+        } else {
+          // --- CONDITION 2: Other URL ---
+          // Fetch against the URL
+          const response = await fetch(codeUrl);
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          // The code is the response text
+          const code = await response.text();
+
+          // Get title from the url path after the last /
+          const path = new URL(codeUrl).pathname;
+          const title = path.split('/').pop() || 'imported_script.bsh'; // Default title if path ends in /
+
+          // Run the function
+          addNewTab({ code: code, title: title });
+          showAlert('Code loaded successfully from URL.');
+        }
+      } catch (error) {
+        // General error message
+        showAlert(`Failed to fetch data: ${error.message}`);
+      } finally {
+        importCodeModal.style.display = 'none';
+      }
+    });
+
+  </script>
+</body>
+
+</html>
